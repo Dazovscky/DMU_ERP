@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.signals import post_save
 
@@ -13,65 +12,68 @@ DAYS_OF_WEEK = (
     ('Saturday', 'Saturday'),
 )
 
+ASSIGN_VIEW = (
+    ('Лекция', 'Лекция'),
+    ('Prac', 'Prac')
+)
 
-class Teacher(models.Model):
-    name = models.CharField(max_length=150)
+time_slots = (
+    ('09.00 - 10.20', '09.00 - 10.20'),
+    ('10.50 - 12.10', '10.50 - 12.10'),
+    ('12.55 - 14.15', '12.55 - 14.15'),
+    ('14.45 - 16.05', '14.45 - 16.05'),
+)
+
+
+class Discipline(models.Model):
+    s_name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
-class Discipline(models.Model):
-    name = models.CharField(max_length=150)
+class Teacher(models.Model):
+    s_name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
 class Group(models.Model):
-    name = models.CharField(max_length=150)
+    s_name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
 class Assign(models.Model):
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, null=True)
+    assign_view = models.CharField(choices=ASSIGN_VIEW, max_length=15, null=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
+    day = models.CharField(choices=DAYS_OF_WEEK, max_length=15)
 
     def __str__(self):
-        te = Teacher.objects.get(id=self.teacher_id)
-        di = Discipline.objects.get(id=self.discipline_id)
-        gr = Group.objects.get(id=self.group_id)
-        return '%s : %s : %s' % (te.name, di.name, gr.name)
+        return '%s : %s : %s : %s' % (self.discipline, self.assign_view, self.teacher, self.day)
 
 
 class AssignTime(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
-    time = models.IntegerField()
-    day = models.CharField(choices=DAYS_OF_WEEK, max_length=150)
-
-    def __str__(self):
-        return '%s : %s' % (self.assign, self.day)
+    period = models.CharField(choices=time_slots, max_length=50)
+    day = Assign.objects.all().get().day
+    start_date = models.DateField()
+    end_date = models.DateField()
 
 
 class AttendanceClass(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
     date = models.DateField()
 
-
-class Attendance(models.Model):
-    attendance_class = models.ForeignKey(AttendanceClass, on_delete=models.CASCADE, default=1)
-
     def __str__(self):
-        return '%s' % self.attendance_class
-
- 
-class AttendanceRange(models.Model):
-    start_date = models.DateField()
-    end_date = models.DateField()
-
+        return self.assign
 
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
@@ -90,8 +92,8 @@ days = {
 
 def create_attendance(sender, instance, **kwargs):
     if kwargs['created']:
-        start_date = AttendanceRange.objects.all()[:1].get().start_date
-        end_date = AttendanceRange.objects.all()[:1].get().end_date
+        start_date = AssignTime.objects.all()[:1].get().start_date
+        end_date = AssignTime.objects.all()[:1].get().end_date
         for single_date in daterange(start_date, end_date):
             if single_date.isoweekday() == days[instance.day]:
                 try:
@@ -102,3 +104,4 @@ def create_attendance(sender, instance, **kwargs):
 
 
 post_save.connect(create_attendance, sender=AssignTime)
+
