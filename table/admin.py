@@ -1,7 +1,5 @@
-from datetime import datetime
-from django.urls import path
 from django.contrib import admin
-from django.http import HttpResponseRedirect
+
 
 from .models import *
 
@@ -13,7 +11,6 @@ class AssignTimeInline(admin.TabularInline):
 
 class AssignAdmin(admin.ModelAdmin):
     inlines = [AssignTimeInline]
-
 
 
 admin.site.register(Teacher)
