@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+	<link href="{% static 'timetable/css/style.css' %}" rel="stylesheet">
+</head>
+<body>
+{{ att_list }}
+  <div class="table-responsive"><table>
+	<tbody>
+		<tr>
+			<td>Преподаватель</td>
+			<td>Дисциплина</td>
+			<td>Вид занятия</td>
+			<td>Группа</td>
+			<td>Дата</td>
+			<td>Часы</td>
+		</tr>
+{% for item in att_class %}
+		<tr>
+
+			<td>{{ item.assign.teacher }}</td>
+			<td>{{ item.assign.discipline }}</td>
+			<td>{{ item.assign.assign_view }}</td>
+			<td>{{ item.assign.group }}</td>
+			<td>{{ item.date }}</td>
+			<td>{{ item.hours }}</td>
+
+		</tr>
+{% endfor %}
+	</tbody>
+</table></div>
+</body>
+</html>

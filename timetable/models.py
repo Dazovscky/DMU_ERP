@@ -55,9 +55,8 @@ class Assign(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
 
-
     def __str__(self):
-        return '%s : %s : %s' % (self.discipline, self.assign_view, self.teacher)
+        return '%s : %s : %s : %s' % (self.teacher, self.discipline, self.assign_view, self.group)
 
 
 class AssignTime(models.Model):
@@ -68,13 +67,13 @@ class AssignTime(models.Model):
     end_date = models.DateField()
 
 
-
-
-
 class AttendanceClass(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
     date = models.DateField()
+    hours = models.IntegerField(default=2)
 
+    def __str__(self):
+        return '%s : %s : %s' % (self.assign, self.date, self.hours)
 
 
 def daterange(start_date, end_date):
