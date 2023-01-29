@@ -54,26 +54,28 @@ class Assign(models.Model):
     assign_view = models.CharField(choices=ASSIGN_VIEW, max_length=15, null=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
-    day = models.CharField(choices=DAYS_OF_WEEK, max_length=15)
+
 
     def __str__(self):
-        return '%s : %s : %s : %s' % (self.discipline, self.assign_view, self.teacher, self.day)
+        return '%s : %s : %s' % (self.discipline, self.assign_view, self.teacher)
 
 
 class AssignTime(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
     period = models.CharField(choices=time_slots, max_length=50)
-    day = Assign.objects.all().get().day
+    day = models.CharField(choices=DAYS_OF_WEEK, max_length=15)
     start_date = models.DateField()
     end_date = models.DateField()
+
+
+
 
 
 class AttendanceClass(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
     date = models.DateField()
 
-    def __str__(self):
-        return self.assign
+
 
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):

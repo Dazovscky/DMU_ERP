@@ -14,7 +14,7 @@ class AssignPeriodInline(admin.TabularInline):
 
 class AssignPeriod(admin.ModelAdmin):
     inlines = [AssignPeriodInline]
-    list_display = ('discipline', 'assign_view', 'teacher', 'group', 'day')
+    list_display = ('discipline', 'assign_view', 'teacher', 'group')
 
 
 class AttendanceClassAdmin(admin.ModelAdmin):
