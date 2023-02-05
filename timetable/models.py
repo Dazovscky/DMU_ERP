@@ -76,6 +76,14 @@ class AttendanceClass(models.Model):
         return '%s : %s : %s' % (self.assign, self.date, self.hours)
 
 
+class AttendanceTotalHours(models.Model):
+    assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
+    total_hours = models.IntegerField()
+
+    def __str__(self):
+        return '%s : %s' % (self.assign, self.total_hours)
+
+
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)
@@ -95,6 +103,7 @@ def create_attendance(sender, instance, **kwargs):
     if kwargs['created']:
         start_date = AssignTime.objects.all()[:1].get().start_date
         end_date = AssignTime.objects.all()[:1].get().end_date
+        ass = Assign.objects.all()[:1]
         for single_date in daterange(start_date, end_date):
             if single_date.isoweekday() == days[instance.day]:
                 try:
@@ -102,6 +111,8 @@ def create_attendance(sender, instance, **kwargs):
                 except AttendanceClass.DoesNotExist:
                     a = AttendanceClass(date=single_date.strftime("%Y-%m-%d"), assign=instance.assign)
                     a.save()
+        for i in range(len(ass)):
+            AttendanceTotalHours(assign=instance.assign, total_hours=AttendanceClass.objects.filter(assign_id=ass[i].id).count()*2).save()
 
 
 post_save.connect(create_attendance, sender=AssignTime)

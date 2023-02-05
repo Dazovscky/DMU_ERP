@@ -21,8 +21,13 @@ class AttendanceClassAdmin(admin.ModelAdmin):
     list_display = ('assign', 'date')
 
 
+class AttendanceTotalHoursAdmin(admin.ModelAdmin):
+    list_display = ('assign', 'total_hours')
+
+
 admin.site.register(Discipline)
 admin.site.register(Teacher)
 admin.site.register(Group)
 admin.site.register(Assign, AssignPeriod)
 admin.site.register(AttendanceClass, AttendanceClassAdmin)
+admin.site.register(AttendanceTotalHours, AttendanceTotalHoursAdmin)
