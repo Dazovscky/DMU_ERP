@@ -1,10 +1,17 @@
 from datetime import timedelta
-
+from django.utils.translation import gettext_lazy as _
+from django.apps import AppConfig
 from django.db import models
 from django.db.models.signals import post_save
 
+
+class MyAppConfig(AppConfig):
+    name = 'Timetable'
+    verbose_name = _('Transalation of MyApp here')
+
+
 DAYS_OF_WEEK = (
-    ('Monday', 'Monday'),
+    ('Понеділок', 'Понеділок'),
     ('Tuesday', 'Tuesday'),
     ('Wednesday', 'Wednesday'),
     ('Thursday', 'Thursday'),
@@ -13,8 +20,8 @@ DAYS_OF_WEEK = (
 )
 
 ASSIGN_VIEW = (
-    ('Лекция', 'Лекция'),
-    ('Prac', 'Prac')
+    ('Лекція', 'Лекція'),
+    ('Практика', 'Практика')
 )
 
 time_slots = (
@@ -26,37 +33,53 @@ time_slots = (
 
 
 class Discipline(models.Model):
-    s_name = models.CharField(max_length=20)
-    name = models.CharField(max_length=100)
+    s_name = models.CharField(max_length=20, verbose_name="Коротка назва")
+    name = models.CharField(max_length=100, verbose_name="Повна назва")
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = 'Дисципліни'
+        verbose_name_plural = 'Дисципліни'
 
 
 class Teacher(models.Model):
-    s_name = models.CharField(max_length=20)
-    name = models.CharField(max_length=100)
+    s_name = models.CharField(max_length=20, verbose_name="Им'я")
+    name = models.CharField(max_length=100, verbose_name="ФИО")
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = 'Викладачі'
+        verbose_name_plural = 'Викладачі'
 
 
 class Group(models.Model):
-    s_name = models.CharField(max_length=20)
-    name = models.CharField(max_length=100)
+    s_name = models.CharField(max_length=20, verbose_name="Курс")
+    name = models.CharField(max_length=100, verbose_name="Группа")
 
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = 'Групи'
+        verbose_name_plural = 'Групи'
+
 
 class Assign(models.Model):
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, null=True)
-    assign_view = models.CharField(choices=ASSIGN_VIEW, max_length=15, null=True)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, null=True, verbose_name="Дисципліна")
+    assign_view = models.CharField(choices=ASSIGN_VIEW, max_length=15, null=True, verbose_name="Вид заняття")
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True, verbose_name="Викладач")
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True, verbose_name="Група")
 
     def __str__(self):
         return '%s : %s : %s : %s' % (self.teacher, self.discipline, self.assign_view, self.group)
+
+    class Meta:
+        verbose_name = 'Заняття'
+        verbose_name_plural = 'Заняття'
 
 
 class AssignTime(models.Model):
@@ -66,22 +89,34 @@ class AssignTime(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+    class Meta:
+        verbose_name = 'подію'
+        verbose_name_plural = 'події'
+
 
 class AttendanceClass(models.Model):
-    assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
-    date = models.DateField()
-    hours = models.IntegerField(default=2)
+    assign = models.ForeignKey(Assign, on_delete=models.CASCADE, verbose_name="Заняття")
+    date = models.DateField(verbose_name="Дата проведення")
+    hours = models.IntegerField(default=2, verbose_name="Годин проведено")
 
     def __str__(self):
         return '%s : %s : %s' % (self.assign, self.date, self.hours)
 
+    class Meta:
+        verbose_name = 'Події'
+        verbose_name_plural = 'Події'
+
 
 class AttendanceTotalHours(models.Model):
-    assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
-    total_hours = models.IntegerField()
+    assign = models.ForeignKey(Assign, on_delete=models.CASCADE, verbose_name="Заняття")
+    total_hours = models.IntegerField(verbose_name="Години")
 
     def __str__(self):
         return '%s : %s' % (self.assign, self.total_hours)
+
+    class Meta:
+        verbose_name = 'Загальна кількість годин'
+        verbose_name_plural = 'Загальна кількість годин'
 
 
 def daterange(start_date, end_date):
