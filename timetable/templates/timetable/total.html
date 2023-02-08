@@ -25,6 +25,7 @@
             <td>{{ item.total_hours }}</td>
 		</tr>
 {% endfor %}
+	<a href="{% url 'export_xls' %}">Export all users</a>
 	</tbody>
 </body>
 </html>

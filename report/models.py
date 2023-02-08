@@ -1,14 +1,7 @@
 from datetime import timedelta
-from django.utils.translation import gettext_lazy as _
-from django.apps import AppConfig
+
 from django.db import models
-from django.db.models.signals import post_save
-
-
-class MyAppConfig(AppConfig):
-    name = 'Timetable'
-    verbose_name = _('Transalation of MyApp here')
-
+from django.db.models.signals import post_save, post_delete, pre_save
 
 DAYS_OF_WEEK = (
     ('Понеділок', 'Понеділок'),
@@ -32,18 +25,6 @@ time_slots = (
 )
 
 
-class Discipline(models.Model):
-    s_name = models.CharField(max_length=20, verbose_name="Коротка назва")
-    name = models.CharField(max_length=100, verbose_name="Повна назва")
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = 'Дисципліни'
-        verbose_name_plural = 'Дисципліни'
-
-
 class Teacher(models.Model):
     s_name = models.CharField(max_length=20, verbose_name="Им'я")
     name = models.CharField(max_length=100, verbose_name="ФИО")
@@ -56,12 +37,24 @@ class Teacher(models.Model):
         verbose_name_plural = 'Викладачі'
 
 
-class Group(models.Model):
-    s_name = models.CharField(max_length=20, verbose_name="Курс")
-    name = models.CharField(max_length=100, verbose_name="Группа")
+class Discipline(models.Model):
+    s_name = models.CharField(max_length=20, verbose_name="Коротка назва")
+    name = models.CharField(max_length=100, verbose_name="Повна назва")
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = 'Дисципліни'
+        verbose_name_plural = 'Дисципліни'
+
+
+class Course(models.Model):
+    course = models.IntegerField(verbose_name="Курс")
+    group_name = models.CharField(max_length=100, verbose_name="Группа")
+
+    def __str__(self):
+        return self.group_name
 
     class Meta:
         verbose_name = 'Групи'
@@ -72,7 +65,10 @@ class Assign(models.Model):
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, null=True, verbose_name="Дисципліна")
     assign_view = models.CharField(choices=ASSIGN_VIEW, max_length=15, null=True, verbose_name="Вид заняття")
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, null=True, verbose_name="Викладач")
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True, verbose_name="Група")
+    group = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, verbose_name="Група")
+    hours = models.IntegerField(blank=True, null=True)
+    start_date = models.DateField(null=True)
+    end_date = models.DateField(null=True)
 
     def __str__(self):
         return '%s : %s : %s : %s' % (self.teacher, self.discipline, self.assign_view, self.group)
@@ -86,8 +82,7 @@ class AssignTime(models.Model):
     assign = models.ForeignKey(Assign, on_delete=models.CASCADE)
     period = models.CharField(choices=time_slots, max_length=50)
     day = models.CharField(choices=DAYS_OF_WEEK, max_length=15)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    hour = models.IntegerField(default=2)
 
     class Meta:
         verbose_name = 'подію'
@@ -95,9 +90,10 @@ class AssignTime(models.Model):
 
 
 class AttendanceClass(models.Model):
-    assign = models.ForeignKey(Assign, on_delete=models.CASCADE, verbose_name="Заняття")
+    assign = models.ForeignKey(Assign, on_delete=models.CASCADE, verbose_name="Заняття", null=True)
+    #teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name="Викладач")
     date = models.DateField(verbose_name="Дата проведення")
-    hours = models.IntegerField(default=2, verbose_name="Годин проведено")
+    hours = models.IntegerField(blank=True, verbose_name="Годин проведено", null=True)
 
     def __str__(self):
         return '%s : %s : %s' % (self.assign, self.date, self.hours)
@@ -107,29 +103,13 @@ class AttendanceClass(models.Model):
         verbose_name_plural = 'Події'
 
 
-class AttendanceTotalHours(models.Model):
-    assign = models.ForeignKey(Assign, on_delete=models.CASCADE, verbose_name="Заняття")
-    total_hours = models.IntegerField(verbose_name="Години")
-
-    def __str__(self):
-        return '%s : %s' % (self.assign, self.total_hours)
-
-    class Meta:
-        verbose_name = 'Загальна кількість годин'
-        verbose_name_plural = 'Загальна кількість годин'
-
-    @property
-    def att_class(self):
-        ass = Assign.objects.all()
-
-
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)
 
 
 days = {
-    'Monday': 1,
+    'Понеділок': 1,
     'Tuesday': 2,
     'Wednesday': 3,
     'Thursday': 4,
@@ -140,9 +120,8 @@ days = {
 
 def create_attendance(sender, instance, **kwargs):
     if kwargs['created']:
-        start_date = AssignTime.objects.all()[:1].get().start_date
-        end_date = AssignTime.objects.all()[:1].get().end_date
-        ass = Assign.objects.all()[:1]
+        start_date = Assign.objects.all()[:1].get().start_date
+        end_date = Assign.objects.all()[:1].get().end_date
         for single_date in daterange(start_date, end_date):
             if single_date.isoweekday() == days[instance.day]:
                 try:
@@ -150,9 +129,37 @@ def create_attendance(sender, instance, **kwargs):
                 except AttendanceClass.DoesNotExist:
                     a = AttendanceClass(date=single_date.strftime("%Y-%m-%d"), assign=instance.assign)
                     a.save()
-        for i in range(len(ass)):
-            AttendanceTotalHours(assign=instance.assign, total_hours=AttendanceClass.objects.filter(assign_id=ass[i].id).count()*2).save()
 
 
+def total(sender, instance, **kwargs):
+    if kwargs['created']:
+        assign_time = AssignTime.objects.all()
+        list_hours = []
+        for id in assign_time:
+            list_hours.append(id.hour)
+            print(list_hours)
+        Assign.objects.update(hours=sum(list_hours))
+
+
+def delete(sender, instance, **kwargs):
+    assign_time = AssignTime.objects.all()
+    list_hours = []
+    for id in assign_time:
+        list_hours.append(id.hour)
+    Assign.objects.update(hours=sum(list_hours))
+
+
+def update(sender, *args, **kwargs):
+    assign_time = AssignTime.objects.all()
+    list_hours = []
+    for id in assign_time:
+        list_hours.append(id.hour)
+        print(id.hour)
+        print(list_hours)
+    Assign.objects.update(hours=sum(list_hours))
+
+
+post_save.connect(total, sender=AssignTime)
+post_save.connect(update, sender=AssignTime)
+post_delete.connect(delete, sender=AssignTime)
 post_save.connect(create_attendance, sender=AssignTime)
-
